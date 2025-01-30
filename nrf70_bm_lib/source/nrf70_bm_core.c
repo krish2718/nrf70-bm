@@ -60,7 +60,13 @@ extern const struct nrf_wifi_osal_ops nrf_wifi_os_bm_ops;
 	extern __aligned(16)    const char prefix ## _ ## name ## _start[]; \
 	extern                  const char prefix ## _ ## name ## _end[];
 
-INCBIN(_bin, nrf70_fw, STR(CONFIG_NRF_WIFI_FW_BIN));
+#ifdef CONFIG_NRF70_SCAN_ONLY
+INCBIN(_bin, nrf70_sys_fw, STR(CONFIG_NRF_WIFI_SYS_FW_BIN));
+#endif
+
+#ifdef CONFIG_NRF70_RADIO_TEST
+INCBIN(_bin, nrf70_rt_fw, STR(CONFIG_NRF_WIFI_RT_FW_BIN));
+#endif
 
 
 void nrf70_bm_mac_txt(const unsigned char *mac, char *mac_str, size_t size)
@@ -74,18 +80,12 @@ void nrf70_bm_mac_txt(const unsigned char *mac, char *mac_str, size_t size)
 			 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 }
 
-static enum nrf_wifi_status nrf_wifi_fw_load(void *rpu_ctx)
+static enum nrf_wifi_status nrf_wifi_fw_load(void *rpu_ctx, const uint8_t *fw_start, const uint8_t *fw_end)
 {
 	enum nrf_wifi_status status = NRF_WIFI_STATUS_FAIL;
 	struct nrf_wifi_fmac_fw_info fw_info = { 0 };
-	uint8_t *fw_start;
-	uint8_t *fw_end;
 
-	fw_start = (uint8_t *)_bin_nrf70_fw_start;
-	fw_end = (uint8_t *)_bin_nrf70_fw_end;
-
-	status = nrf_wifi_fmac_fw_parse(rpu_ctx, fw_start, fw_end - fw_start,
-					&fw_info);
+	status = nrf_wifi_fmac_fw_parse(rpu_ctx, fw_start, fw_end - fw_start, &fw_info);
 	if (status != NRF_WIFI_STATUS_SUCCESS) {
 		NRF70_LOG_ERR("%s: nrf_wifi_fmac_fw_parse failed", __func__);
 		return status;
@@ -95,6 +95,39 @@ static enum nrf_wifi_status nrf_wifi_fw_load(void *rpu_ctx)
 
 	if (status != NRF_WIFI_STATUS_SUCCESS) {
 		NRF70_LOG_ERR("%s: nrf_wifi_fmac_fw_load failed", __func__);
+	}
+
+	return status;
+}
+
+static enum nrf_wifi_status nrf_wifi_fw_load_by_mode(void *rpu_ctx, bool is_sys_mode)
+{
+	enum nrf_wifi_status status = NRF_WIFI_STATUS_FAIL;
+	const uint8_t *fw_start = NULL;
+	const uint8_t *fw_end = NULL;
+
+#if defined(CONFIG_NRF70_SCAN_ONLY) && defined(CONFIG_NRF70_RADIO_TEST)
+	if (is_sys_mode) {
+		fw_start = _bin_nrf70_sys_fw_start;
+		fw_end = _bin_nrf70_sys_fw_end;
+	} else {
+		fw_start = _bin_nrf70_rt_fw_start;
+		fw_end = _bin_nrf70_rt_fw_end;
+	}
+#elif defined(CONFIG_NRF70_SCAN_ONLY)
+	fw_start = _bin_nrf70_sys_fw_start;
+	fw_end = _bin_nrf70_sys_fw_end;
+#elif defined(CONFIG_NRF70_RADIO_TEST)
+	fw_start = _bin_nrf70_rt_fw_start;
+	fw_end = _bin_nrf70_rt_fw_end;
+#else
+	NRF70_LOG_ERR("%s: No firmware mode defined", __func__);
+	return status;
+#endif
+
+	status = nrf_wifi_fw_load(rpu_ctx, fw_start, fw_end);
+	if (status != NRF_WIFI_STATUS_SUCCESS) {
+		NRF70_LOG_ERR("%s: nrf_wifi_fw_load failed", __func__);
 	}
 
 	return status;

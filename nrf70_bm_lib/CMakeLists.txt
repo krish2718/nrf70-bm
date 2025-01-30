@@ -27,13 +27,13 @@ if (CONFIG_NRF70_BM_LIB)
   target_compile_definitions_ifndef(CONFIG_NRF70_RADIO_TEST
     nrf70-bm-lib
     PRIVATE
-    -DCONFIG_NRF_WIFI_FW_BIN=${NRF_WIFI_BINS_DIR}/scan_only/nrf70.bin
+    -DCONFIG_NRF_WIFI_SYS_FW_BIN=${NRF_WIFI_BINS_DIR}/scan_only/nrf70.bin
   )
 
   target_compile_definitions_ifdef(CONFIG_NRF70_RADIO_TEST
     nrf70-bm-lib
     PRIVATE
-    -DCONFIG_NRF_WIFI_FW_BIN=${NRF_WIFI_BINS_DIR}/radio_test/nrf70.bin
+    -DCONFIG_NRF_WIFI_RT_FW_BIN=${NRF_WIFI_BINS_DIR}/radio_test/nrf70.bin
   )
 
   target_compile_definitions_ifdef(CONFIG_NRF70_RADIO_TEST
